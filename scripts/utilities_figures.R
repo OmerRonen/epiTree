@@ -63,12 +63,16 @@ adjustAxes <- function(p) {
 
 
 
-plotResponse <- function(pval.pcs, data = NULL, range1, range2, mean_pheno){
-  
-  #data should be a list with entried geno and pheno
-  # geno should be a matrix with two columns giving the genotype data
-  # pheno should be a vector with the phenotype data of same length as nrow(geno)
-  
+plotResponse <- function(pval.pcs, data = NULL, range1, range2){
+  # Plot response surface of PCS p-value CART models for the null model (additive) and the alternative model (interacton)
+  # args:
+  # pval.pcs PCS p-value output from function pcsTestPredixCART (see "utilities_tests.R") with return.tree = TRUE
+  # data (optional) should be a list with entried geno and pheno
+                   # geno should be a matrix with two columns giving the genotype data
+                   # pheno should be a vector with the phenotype data of same length as nrow(geno)
+  # range1 numeric vector of length 2 giving the plotted range for the first feature (when missing the range from the input data is used)
+  # range2 same as range1, but for the second feature
+  # mean_pheno 
   library(tidyverse)
   library(RColorBrewer)
   library(ggpubr)
@@ -79,9 +83,6 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2, mean_pheno){
   colorScale_fill <- scale_color_gradientn( colours = c(brewer.pal(n = 9, name = "Blues")[8:1],  
                                                         brewer.pal(n = 9, name = "Reds")[1:8]), limits = c(0, 1), aesthetics = "fill")
   
-  if(missing(mean_pheno)){
-    mean_pheno <- 0.5
-  }
   
   if(!missing(data)){
     geno.sub <- data$geno
@@ -89,7 +90,8 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2, mean_pheno){
   }
   
   pv <- pval.pcs
-  
+
+  mean_pheno <- attr(pv, "meanPheno")
   tree <- attr(pv, "treeA")
   tree_comb <- attr(pv, "treeH")
   
@@ -175,12 +177,15 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2, mean_pheno){
 
 
 plotPvalues <- function(pval.info, n){
-  #enter a data frame with columns
-  # genes
-  # pval
-  # stab
-  # logLA
-  # logLH
+  # Plot summary figure with p-values (first column), stability score (second column), and prediction error of null and alternative model (third column)
+  # args:
+  # pval.info a data.frame with the following entries:
+  # genes character vector with gene names of the interaction
+  # pval numeric vector with p-values (between 0 and 1)
+  # stab numeric vector with stability scores (between 0 and 1)
+  # logLA numeric vector with log-likelihood for alternative model
+  # logLH numeric vector with log-likelihood for null model
+  # n (optional) single integer to rescale log-likelihood
   
   library(rpart.plot)
   library(tidyverse)
@@ -190,16 +195,15 @@ plotPvalues <- function(pval.info, n){
   
   if(missing(n)){
     n <- 1
-    namePA <- "Prediction Error \n - log P(Y|p)  "
+    namePA <- "Prediction Error \n - log P(Y|p)"
   }else{
     namePA <- "Prediction Error \n - log P(Y|p) / n "
-    
   }
   
   pval.info <- pval.info %>%
-    mutate(order = str_count(genes, ",") + 1) %>% 
-    arrange(order, desc(pval) ) %>%
-    mutate(genes = fct_inorder(genes))  
+    dplyr::mutate(order = str_count(genes, ",") + 1) %>% 
+    dplyr::arrange(order, desc(pval) ) %>%
+    dplyr::mutate(genes = fct_inorder(genes))  
   
   tx_s <- 40
   col_bar <- c("#E6AB02", "#FFF2AE")
@@ -246,7 +250,7 @@ plotPvalues <- function(pval.info, n){
   
   plotPA <- pval.info %>% dplyr::select(genes, logLH, order) %>%
     gather(key = type, value = prediction, -genes, -order) %>%
-    mutate(prediction = - prediction / n) %>%
+    dplyr::mutate(prediction = - prediction / n) %>%
     ggplot(aes(y = genes, x=prediction, fill=type)) +
     geom_col(position="dodge", width = 0.5) + 
     geom_col(position="dodge", width = 0.5, data = data2, aes(y = genes, x=prediction, fill=type)) + 
