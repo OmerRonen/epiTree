@@ -318,6 +318,7 @@ pcsTestPredixCART <- function(geno, pheno, ind.int, geno.train, pheno.train, ret
   if(return.tree){
     attr(pv, "treeA") <- tree
     attr(pv, "treeH") <- tree_comb
+    attr(pv, "meanPheno") <- mean(pheno.all) 
   }
   
   if(return.fitted){
