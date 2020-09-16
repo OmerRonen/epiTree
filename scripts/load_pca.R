@@ -11,7 +11,7 @@ if (!exists('app.geno')) stop('Specify application number used in pca file as ap
 
 
 # Load in matrix of principle components
-xpc <- fread(path.pca, select=c('app13721', paste0('PC', 1:40))) %>% filter(app.geno %in% sel.sub)
+xpc <- fread(path.pca, select=c('IDs', paste0('PC', 1:40))) %>% filter(app.geno %in% sel.sub)
 xpc <- as.matrix(xpc[match(sel.sub, xpc$app.geno), 2:ncol(xpc)])
 xpc <- Matrix(xpc, sparse=TRUE)
 rownames(xpc) <- sel.sub

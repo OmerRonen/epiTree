@@ -29,7 +29,7 @@ The ***epiTree*** pipeline requires the following data input:
 1. Genotype files in Plink format (bim/fam/bam), one file per chromosome named as *name_plink_file_chr1*, *name_plink_file_chr2*, etc.. Chromosomes can be missing.
 2. A corresponding phenotype file, indicating a single, binary phenotype. Real valued phenotypes are also possible, with slight modifications to the scripts.
 3. A mapping file that maps the subject identification numbers of the phenotype file (first column) to the subject identification numbers of the genotype file (second column).
-5. A file with principle components for individual subjects, which is assumed to have the same subject IDs as the genotype file.
+5. A file with principle components for individual subjects (one row per subject). The subject IDs are assumed to be in a column named "IDs" and the PCs are assumed to be in columns named "PC1", "PC2", etc.. Be default the first 40 PCs are included. The subject IDs are assumed to be the same as in the genotype file, but they don't have to be in the same order.
 6. A PrediXcan [1] data base file, which is used to impute tissue specific gene expression data and can be downloaded at http://predictdb.org.
 
 
