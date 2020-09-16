@@ -1,4 +1,4 @@
-# epiTree -- Learning epistatic polygenic phenotypes with boolean interactions
+# epiTree — Learning epistatic polygenic phenotypes with boolean interactions
 
 ## General Information
 
@@ -26,10 +26,10 @@ To run the pipeline, as it is presented in the following, the following software
 
 The ***epiTree*** pipeline requires the following data input:
 
-1. Genotype files in Plink format (bim/fam/bam), one file per chromosome named as *name_plink_file_chr1*, *name_plink_file_chr2*, etc.. It is ok when some chromosomes are missing.
-2. A corresponding phenotype file, where a single, binary phenotype is considered. Real valued phenotypes are also possible, with slight modifications to the scripts.
+1. Genotype files in Plink format (bim/fam/bam), one file per chromosome named as *name_plink_file_chr1*, *name_plink_file_chr2*, etc.. Chromosomes can be missing.
+2. A corresponding phenotype file, indicating a single, binary phenotype. Real valued phenotypes are also possible, with slight modifications to the scripts.
 3. A mapping file that maps the subject identification numbers of the phenotype file (first column) to the subject identification numbers of the genotype file (second column).
-5. A file with PCAs for individual subjects, which is assumed to have the same subject IDs as the genotype file.
+5. A file with principle components for individual subjects, which is assumed to have the same subject IDs as the genotype file.
 6. A PrediXcan [1] data base file, which is used to impute tissue specific gene expression data and can be downloaded at http://predictdb.org.
 
 
@@ -38,20 +38,20 @@ The ***epiTree*** pipeline requires the following data input:
 
 ### Biologically inspired dimension reduction via PrediXcan
 
-The first step of the ***epiTree*** pipeline is to perform a biologically inspired dimension reduction step via imputing tissue specific gene expression levels from SNP data, which can be done with the PrediXcan software [1]. Depending on the PrediXcan database that is used, this reduces the feature dimension from several million SNPs to a few thousand gene level feautures. 
+The first step of the ***epiTree*** pipeline is to perform a biologically inspired dimension reduction step by imputing tissue specific gene expression levels from SNP data, which can be done with the PrediXcan software [1]. Depending on the PrediXcan database that is used, this reduces the feature dimension from several million SNPs to a few thousand gene-level feautures. 
 
 A detailed description for how to obtain imputed gene expression levels, is provided by the authors of PrediXcan, see https://github.com/hakyimlab/PrediXcan and manuscript [1]. For sake of completeness, we provide a step-by-step description below.
 
 #### Extract SNPs from the PrediXcan database
-To speed up computation time and avoid memory issues, in a first step we will create new Plink files that only contain the SNPs that actually enter in the particular PrediXcan model. To this end, we first obtain a list of all SNPs that enter the particular PrediXcan data base. An R script, which does this is provided in 
+To speed up computation time and avoid memory issues, in a first step we will create new Plink files that only contain the SNPs that actually enter in the particular PrediXcan model. Toward this end, we first obtain a list of all SNPs in a given PrediXcan data base. An R script for generating this list is provided in 
 
 `scripts/utilities_snpFromDB.R`
 
 Note that you might need to adjust `name.db` and `path.db` to provide the correct name and path for your database file.
 
-#### Generate Plink files which only contain PrediXcan SNPs
+#### Generate Plink files containing PrediXcan SNPs
 
-Given the list of SNPs from the previous step, we now generate new Plink files that only contain those SNPs. The following shell script submitts an slurm job which does this
+Given the list of SNPs from the previous step, we generate new Plink files that only contain those SNPs. The following shell script does this
 
 `scripts/submit_plinkSubset.sh`
 
@@ -62,7 +62,7 @@ Further, you will need to specify
 2. path and name of the SNP list that you generated in the previous step, 
 3. path and name of a .fam file with the subject IDs that you want to consider.
 
-When you only want to consider a subset of subjects from your original Plink file, than this can be specified in the .fam file. Otherwise, you can take the .fam file from your input Plink files. Recall that your input Plink files are assumed to be one (bim/bam/fam) file per chromosome, named as *name_plink_file_chr1*, *name_plink_file_chr2*, etc..
+To consider a subset of subjects from your original Plink file, adjust the .fam file to include the desired subjects. Otherwise, you can take the .fam file from your input Plink files. Recall that your input Plink files are assumed to be one (bim/bam/fam) file per chromosome, named as *name_plink_file_chr1*, *name_plink_file_chr2*, etc..
 
 You will need to run this script for each chromosome separately, so for example, when you consider chromosome 1 - 22, you can run
 
@@ -83,7 +83,7 @@ Note that you will need to specify
 
 #### Run PrediXcan on dosage files to get imputed gene expression
 
-Having the dosage files from the previous step, we can finally run PrediXcan. The following script submits a slurm job for this. 
+Given dosage files from the previous step, we can run PrediXcan. The following script submits a slurm job for this. 
 
 `scripts/submit_dos2predix.sh`
 
@@ -98,7 +98,7 @@ The `PrediXcan.py` file that we provide in the `scripts` folder here, is the one
 
 ### Gene level analysis
 
-Once we obtained the imputed gene expression data from the previous step, we can run the gene level analysis of the ***epiTree***  pipeline. To this end, we need to do a data split into training and test data. As an example, in the following scripts we select a balanced sample of 26K training and 4K test samples, as in [2]. For different sample size, the scripts can be easily adapted.
+With imputed gene expression data from the previous step, we can run the gene level analysis of the ***epiTree***  pipeline. First, we split data into training and test sets. As an example, in the following scripts we select a balanced sample of 26K training and 4K test samples, as in [2]. For different sample size, the scripts can be easily adapted.
 
 #### Run iRF candidate interaction selection for imputed gene expression features 
 
@@ -113,11 +113,11 @@ Note that, as before, you will need specify
 3. path and name for the phenotype files *path.pheno*, 
 4. path and name for the mapping files between genotype and phenotype subject IDs *path.key*.
 
-Note that there were a couple of genes which, by default, were excluded by the analysis and are specified in the file `/data/geneExclusionList.txt` and passed over to the script via the *path.excl* argument. However, none of those genes was present in the PrediXcan database `/data/gtex_v7_Skin_Sun_Exposed_Lower_leg_imputed_europeans_tw_0.5_signif.db` that was used for our red hair analysis. In practice, one can modify this file accordingly.
+In our analysis, a small subset of genes were excluded and are specified in the file `/data/geneExclusionList.txt`. The path to this file is specified via the *path.excl* argument. However, none of those genes was present in the PrediXcan database `/data/gtex_v7_Skin_Sun_Exposed_Lower_leg_imputed_europeans_tw_0.5_signif.db` used for our red hair analysis. In practice, one can modify this file accordingly.
 
 #### Compute CART based PCS p-values on gene level
 
-For the candidate interactions from the previous step, we can now compute CART based PCS p-values, using the *test data* to evaluate their significane. Note that the this step also requires the *training data* from the previous step, as it is used to fit the individual CART components. This is done in the following R script, which also computes standard p-values from logistic regression with a multiplicative interaction term for comparison, using the *glm* and *lmtest* R packages. As before, you will need to adapt the paths accordingly.
+For the candidate interactions from the previous step, we can now compute CART based PCS p-values, using the *test data* to evaluate their significane. Note that this step also requires the *training data* from the previous step, as it is used to fit the individual CART components. This is done in the following R script, which also computes standard p-values from logistic regression with a multiplicative interaction term for comparison, using the *glm* and *lmtest* R packages. As before, you will need to adjust the paths accordingly.
 
 `scripts/analysis_pcsPvalues_gene.R`
 
@@ -125,11 +125,11 @@ We stress that PCS p-values can also be computed independently from the iRF mode
 
 ### SNP level analysis
 
-From the candidate interactions between imputed gene expression features, we can go back to the SNP level, to seach for interactions between SNPs that correspond to genes that were extracted from the previous step.
+From the candidate interactions between imputed gene expression features, we can go back to the SNP level, to seach for interactions between SNPs that correspond to genes extracted from the previous step.
 
 #### Extract SNP coordinates and subset Plink files
 
-The following R script uses the results from the previous step to extract for each gene that appears in an iRF interaction the respective coordinates (start/end location +/- 1K base pairs). It also includes the top 50 genes in terms of Gini importance. Then it extracts a list of all SNPs within those regions from the input Plink files. As before, one has to specify the path of the plink files and PrediXcan database accordingly.
+The following R script uses the results from the previous step to extract the coordinates of each gene (start/end location +/- 1K base pairs) that appears in an iRF interaction or in the top 50 genes in terms of Gini importance. BAsed on these coordinates, the script extracts a list of all SNPs within those regions from the input Plink files. As before, one has to specify the path of the plink files and PrediXcan database accordingly.
 
 `scripts/utilities_extractSNPsfromGenes.R`
 
