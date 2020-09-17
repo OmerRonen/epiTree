@@ -68,7 +68,7 @@ You will need to run this script for each chromosome separately, so for example,
 
 #### Generate dosage files
 
-PrediXcan requires genotype input files as dosage files. The following script submits slurm jobs which transform the Plink files from the previous step into dosage files, using the python script “convert_plink_to_dosage.py” from https://github.com/hakyimlab/PrediXcan/blob/master/Software/convert_plink_to_dosage.py.
+PrediXcan requires genotype input files as dosage files. The following script submits jobs that transform the Plink files from the previous step into dosage files, using the python script “convert_plink_to_dosage.py” from https://github.com/hakyimlab/PrediXcan/blob/master/Software/convert_plink_to_dosage.py.
 
 `scripts/submit_plink2dos.sh`
 
@@ -80,7 +80,7 @@ You will need to modify the script above to specify:
 
 #### Run PrediXcan on dosage files to get imputed gene expression
 
-Given dosage files from the previous step, we can run PrediXcan. The following script submits a slurm job for this. 
+Given dosage files from the previous step, we can run PrediXcan. The following script submits a job for this. 
 
 `scripts/submit_dos2predix.sh`
 
