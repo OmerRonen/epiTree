@@ -19,8 +19,6 @@ To run the pipeline, as it is presented in the following, the following software
 - Python 2.7
   - numpy package
 - Plink 1.9
-- slurm to run the .sh scripts
-
 
 ## Data input
 
