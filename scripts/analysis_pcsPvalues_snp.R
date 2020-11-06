@@ -43,7 +43,7 @@ res <- 'analysis_iRF_snp'      #name of results
 path.res <- '../results/'
 name.out <- paste0(res,'.Rdata')
 path.lasso <- paste0("../results/lasso_",name.out)      #output file for lasso results only
-path.ranger <- paste0(home,"/irfGWES/results/ranger_",name.out)     #output file for ranger results only
+path.ranger <- paste0("../results/ranger_",name.out)     #output file for ranger results only
 
 
 
@@ -182,16 +182,16 @@ if(reloadData){
   pr.curve.irf <- pr.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
   roc.curve.irf <- roc.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
   
-  save(file = paste0(Sys.getenv("HOME"),'/irfGWES/results/ypred_',res,'.Rdata'), ypred.lasso, ypred.ranger, ypred.irf)
+  save(file = paste0('../results/ypred_',res,'.Rdata'), ypred.lasso, ypred.ranger, ypred.irf)
   
   ###############################################################################
   ## Save data  
   ###############################################################################
   
-  save(file = paste0(Sys.getenv("HOME"),'/irfGWES/data/data_',res,'.Rdata'), geno, pheno, geno.train, pheno.train, pca)
+  save(file = paste0('../data/data_',res,'.Rdata'), geno, pheno, geno.train, pheno.train, pca)
   
 }else{
-  load(file = paste0(Sys.getenv("HOME"),'/irfGWES/data/data_',res,'.Rdata'))
+  load(file = paste0('../data/data_',res,'.Rdata'))
   
 }
 
@@ -268,7 +268,7 @@ if(file.exists(paste0('../results/pval_all_',res,'.Rdata'))){
   
   }
 
-  save(file = paste0(Sys.getenv("HOME"),'/irfGWES/results/pval_all_',res,'.Rdata'), pFull.intra, pDom.intra, pRec.intra,
+  save(file = paste0('../results/pval_all_',res,'.Rdata'), pFull.intra, pDom.intra, pRec.intra,
        pFullPCS.intra, pDomPCS.intra, pRecPCS.intra,
        ind.stab, ind.ichr, ind.stab.inter, ind.stab.intra)
 }
@@ -279,7 +279,7 @@ if(file.exists(paste0('../results/pval_all_',res,'.Rdata'))){
 ###############################################################################
 
 if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
-  load(paste0(Sys.getenv("HOME"),'/irfGWES/results/pval_stab_',res,'.Rdata'))
+  load(paste0('../results/pval_stab_',res,'.Rdata'))
 }else{
 
   B = 10 #number of bootstrap replicates
@@ -351,7 +351,7 @@ if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
   stab.pRec.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PRec.intra, function(x) x[i] <= tsh.intra)))
   stab.pRecPCS.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PRecPCS.intra, function(x) x[i] <= tsh.intra)))
 
-  save(file = paste0(Sys.getenv("HOME"),'/irfGWES/results/pval_stab_',res,'.Rdata'),
+  save(file = paste0('../results/pval_stab_',res,'.Rdata'),
         stab.pFull.intra, stab.pFullPCS.intra, 
         stab.pDom.intra, stab.pDomPCS.intra,
         stab.pRec.intra, stab.pRecPCS.intra) 

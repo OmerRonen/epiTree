@@ -44,7 +44,7 @@ path.pca <- "path_to_pca_file/name_of_pca_file"       #path to file with princip
 path.out <- '../results/'     #path for output files
 name.out <- paste0(res,'.Rdata')      #name of output files
 path.lasso <- paste0("../results/lasso_",name.out)      #output file for lasso results only
-path.ranger <- paste0(home,"/irfGWES/results/ranger_",name.out)     #output file for ranger results only
+path.ranger <- paste0("../results/ranger_",name.out)     #output file for ranger results only
 
 ###############################################################################
 ## Load results 
@@ -69,8 +69,8 @@ if(reloadData){
   #load batch 1
   load.id <- 1:100000     #load first 100000 subjects
   
-  source(paste0(home, '/irfGWES/scripts/load_predixcan.R'))     #load genotype files
-  source(paste0(home, '/irfGWES/scripts/load_pheno.R'))      #load phenotype files
+  source(paste0('../scripts/load_predixcan.R'))     #load genotype files
+  source(paste0('../scripts/load_pheno.R'))      #load phenotype files
   
   numb_cases <- sum(pheno == 1)
   load.id <-  c(which(pheno == 0)[1:15000], which(pheno == 1)[1:min(15000, numb_cases)])
@@ -84,8 +84,8 @@ if(reloadData){
     pheno_old <- pheno
     numb_cases_old <- numb_cases
     load.id <- (100000 * batch_id + 1):(100000 * batch_id + 100000)
-    source(paste0(home, '/irfGWES/scripts/load_predixcan.R'))
-    source(paste0(home, '/irfGWES/scripts/load_pheno.R'))
+    source(paste0('../scripts/load_predixcan.R'))
+    source(paste0('../scripts/load_pheno.R'))
     
     numb_cases <- sum(pheno == 1)
     load.id <-  which(pheno == 1)[1:min(15000 - numb_cases_old, numb_cases)]
@@ -265,7 +265,7 @@ if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
   stab.pMulti.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PMulti.intra, function(x) x[i] <= tsh.intra)))
   stab.pCart.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PCart.intra, function(x) x[i] <= tsh.intra)))
 
-  save(file = paste0(Sys.getenv("HOME"),'/irfGWES/results/pval_stab_',res,'.Rdata'),
+  save(file = paste0('../results/pval_stab_',res,'.Rdata'),
        stab.pMulti.intra, stab.pCart.intra) 
 }
 

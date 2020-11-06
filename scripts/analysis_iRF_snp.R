@@ -35,7 +35,7 @@ code.na.pheno <- c(6, -1)     #NAs for red hair phenotype are 6, -1
 path.out <-  '../results/'     #path for output files
 name.out <- 'analysis_iRF_snp.Rdata'      #name of output files
 path.lasso <- paste0("../results/lasso_",name.out)      #output file for lasso results only
-path.ranger <- paste0(home,"/irfGWES/results/ranger_",name.out)     #output file for ranger results only
+path.ranger <- paste0("../results/ranger_",name.out)     #output file for ranger results only
 
 ###############################################################################
 ## Load training  data          
