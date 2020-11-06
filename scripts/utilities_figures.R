@@ -176,16 +176,17 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
 
 
 
-plotPvalues <- function(pval.info, n){
+plotPvalues <- function(pval.info, n, logL.full){
   # Plot summary figure with p-values (first column), stability score (second column), and prediction error of null and alternative model (third column)
   # args:
   # pval.info a data.frame with the following entries:
-  # genes character vector with gene names of the interaction
+  # genes character vector with gene names of the interaction, genes separated by ' , '
   # pval numeric vector with p-values (between 0 and 1)
-  # stab numeric vector with stability scores (between 0 and 1)
+  # stab (optional) numeric vector with stability scores (between 0 and 1)
   # logLA numeric vector with log-likelihood for alternative model
   # logLH numeric vector with log-likelihood for null model
   # n (optional) single integer to rescale log-likelihood
+  # logL.full (optimal) numeric value with log-likelihood of full model
   
   library(rpart.plot)
   library(tidyverse)
@@ -202,11 +203,15 @@ plotPvalues <- function(pval.info, n){
   
   pval.info <- pval.info %>%
     dplyr::mutate(order = str_count(genes, ",") + 1) %>% 
+    dplyr::mutate(genes = paste0(genes,' (p-value = ', signif(pval,2), ')')) %>%
     dplyr::arrange(order, desc(pval) ) %>%
-    dplyr::mutate(genes = fct_inorder(genes))  
+    dplyr::mutate(genes = fct_inorder(genes))
+    
   
   tx_s <- 40
-  col_bar <- c("#E6AB02", "#FFF2AE")
+  #col_bar <- c("#E6AB02", "#FFF2AE")
+  col_bar <- c("#009E73", "#999999")
+  
   text_bar <- c("epistasis", "NULL")
   
   plotPV <-  pval.info %>% dplyr::select(genes, pval, order) %>%
@@ -223,37 +228,61 @@ plotPvalues <- function(pval.info, n){
           strip.text.y = element_blank()) +
     facet_grid(rows = vars(order), space = "free", scales = "free") 
   
-  
-  plotStab <- pval.info %>% dplyr::select(genes, stab, order) %>%
-    gather(key = type, value = stability, -genes, -order) %>%
-    ggplot(aes(y = genes, x=stability, fill=type))  +
-    geom_col(position="dodge", width = 0.5) + 
-    xlab("Stability") +
-    ylab("") +
-    coord_cartesian(xlim = c(0, 1))+ 
-    scale_fill_manual(values = col_bar)+
-    theme(legend.title=element_blank(),
-          text = element_text(size = tx_s),
-          legend.position = "none",
-          axis.title.y=element_blank(),
-          axis.text.y=element_blank(),
-          axis.ticks.y=element_blank(),
-          strip.text.y = element_blank()) +
-    facet_grid(rows = vars(order), space = "free", scales = "free") 
-  
+  if('stab' %in% colnames(pval.info)){
+    plotStab <- pval.info %>% dplyr::select(genes, stab, order) %>%
+      gather(key = type, value = stability, -genes, -order) %>%
+      ggplot(aes(y = genes, x=stability, fill=type))  +
+      geom_col(position="dodge", width = 0.5) + 
+      xlab("Stability") +
+      ylab("") +
+      coord_cartesian(xlim = c(0, 1))+ 
+      scale_fill_manual(values = col_bar)+
+      theme(legend.title=element_blank(),
+            text = element_text(size = tx_s),
+            legend.position = "none",
+            axis.title.y=element_blank(),
+            axis.text.y=element_blank(),
+            axis.ticks.y=element_blank(),
+            strip.text.y = element_blank()) +
+      facet_grid(rows = vars(order), space = "free", scales = "free") 
+    
+  }
+    
   logL_min <- pval.info %>% dplyr::select(starts_with("logL")) %>% min 
-  logL_max <- pval.info %>% dplyr::select(starts_with("logL")) %>% max + 20
+  #logL_max <- pval.info %>% dplyr::select(starts_with("logL")) %>% max + 20
+  logL_max <- 0
   
   data2 <- pval.info %>% dplyr::select(genes, logLA, order) %>%
     gather(key = type, value = prediction, -genes, -order) %>%
     mutate(prediction = - prediction / n)
   
-  plotPA <- pval.info %>% dplyr::select(genes, logLH, order) %>%
+  # plotPA <- pval.info %>% dplyr::select(genes, logLH, order) %>%
+  #   gather(key = type, value = prediction, -genes, -order) %>%
+  #   dplyr::mutate(prediction = - prediction / n) %>%
+  #   ggplot(aes(y = genes, x=prediction, fill=type)) +
+  #   geom_col(position="dodge", width = 0.5) + 
+  #   geom_col(position="dodge", width = 0.5, data = data2, aes(y = genes, x=prediction, fill=type)) + 
+  #   xlab(namePA) +
+  #   ylab("") +
+  #   scale_fill_manual(values = col_bar, labels = text_bar)+
+  #   coord_cartesian(xlim = c(- logL_max / n, - logL_min / n))+ 
+  #   theme(legend.title=element_blank(),
+  #         text = element_text(size = tx_s, hjust = 0.2),
+  #         axis.title.y=element_blank(),
+  #         axis.text.y=element_blank(),
+  #         axis.ticks.y=element_blank(),
+  #         legend.text = element_text(size = tx_s),
+  #         legend.key.height=unit(4,"line"),
+  #         strip.text.y = element_text(angle = 0)) +
+  #   facet_grid(rows = vars(order), space = "free", scales = "free") 
+  
+  
+  
+  plotPA <- pval.info %>% dplyr::select(genes, logLH, logLA, order) %>%
     gather(key = type, value = prediction, -genes, -order) %>%
     dplyr::mutate(prediction = - prediction / n) %>%
     ggplot(aes(y = genes, x=prediction, fill=type)) +
     geom_col(position="dodge", width = 0.5) + 
-    geom_col(position="dodge", width = 0.5, data = data2, aes(y = genes, x=prediction, fill=type)) + 
     xlab(namePA) +
     ylab("") +
     scale_fill_manual(values = col_bar, labels = text_bar)+
@@ -269,8 +298,15 @@ plotPvalues <- function(pval.info, n){
     facet_grid(rows = vars(order), space = "free", scales = "free") 
   
   
-  plot_combined <- plotPV + plotStab + plotPA  + plot_layout(nrow = 1)
+  if(!missing(logL.full) & !missing(n)){
+    plotPA <- plotPA +
+      geom_vline(xintercept = - logL.full/n)
+  }
   
+  if('stab' %in% colnames(pval.info)){
+  }else{
+    plot_combined <- plotPV + plotPA  + plot_layout(nrow = 1)
+  }
   return(plot_combined)
 }
 
