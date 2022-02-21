@@ -138,7 +138,11 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
     ylab(paste(colnames(geno_null)[2])) + 
     scale_fill_continuous(breaks = c(0, 1))
   
-  geno_null$y <- pmin(1, pmax(0, do.call("+", single)  + mean_pheno))
+  if(length(single) > 1){
+    geno_null$y <- pmin(1, pmax(0, do.call("+", single)  + mean_pheno))
+  }else{
+    geno_null$y <- pmin(1, pmax(0, do.call("+", single) ))
+  }
   plotAB_sum <- ggplot(geno_null, aes_string(x = colnames(geno_null)[1], y = colnames(geno_null)[2], col= "y")) + 
     geom_point(size = poSi, shape = 15) +
     colorScale  +
