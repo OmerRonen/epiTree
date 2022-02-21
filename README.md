@@ -6,8 +6,9 @@ In this GitHub repository we provide code and a step-by-step guideline for the *
 
 A detailed explanaition of the pipeline can be found at the following manuscript
 
-Behr M, Kumbier K, Cordova-Palomera A, Matthew Aguirre M, Ashley E, Butte E, Arnaout R, Brown B, Priest J†, Yu B† (2020)
+Behr M, Kumbier K, Cordova-Palomera A, Matthew Aguirre M, Ashley E, Butte E, Arnaout R, Brown B, Priest J†, Yu B†
 **Learning epistatic polygenic phenotypes with boolean interactions**
+https://www.biorxiv.org/content/10.1101/2020.11.24.396846v1
 
 
 ## Software requirements
