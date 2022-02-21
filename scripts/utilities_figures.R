@@ -84,7 +84,7 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
                                                         brewer.pal(n = 9, name = "Reds")[1:8]), limits = c(0, 1), aesthetics = "fill")
   
   
-  if(!missing(data)){
+  if(!is.null(data)){
     geno.sub <- data$geno
     pheno <- data$pheno
   }
@@ -97,7 +97,7 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
   
   gnames <- attr(tree$terms, "term.labels")
   
-  if(missing(data)){
+  if(is.null(data)){
     if(missing(range1) | missing(range2)){
       stop("When no data is specified via geno.sub, then both, range1 and rang2, need to bespecified.")
     }
@@ -123,10 +123,8 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
   
   inter <- predict(tree, newdata = data.frame(geno_null))
   
-  comb <- expand.grid(rep(list(c(0,1)), 2))
-  comb <- comb[rowSums(comb) > 0 & rowSums(comb) < 2,]
-  single <- lapply(1:nrow(comb), function(x) predict(tree_comb[[x]], 
-                                                     newdata = data.frame(geno_null[,comb[x,] == 1, drop = F])))#[,2]
+
+  single <- lapply(1:length(tree_comb), function(x) predict(tree_comb[[x]],newdata = geno_null))
   
   poSi <- 2
   
@@ -140,7 +138,7 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
     ylab(paste(colnames(geno_null)[2])) + 
     scale_fill_continuous(breaks = c(0, 1))
   
-  geno_null$y <- pmin(1, pmax(0, single[[1]] + single[[2]] + mean_pheno))
+  geno_null$y <- pmin(1, pmax(0, do.call("+", single)  + mean_pheno))
   plotAB_sum <- ggplot(geno_null, aes_string(x = colnames(geno_null)[1], y = colnames(geno_null)[2], col= "y")) + 
     geom_point(size = poSi, shape = 15) +
     colorScale  +
@@ -150,7 +148,7 @@ plotResponse <- function(pval.pcs, data = NULL, range1, range2){
     scale_fill_continuous(breaks = c(0, 1)) 
   
   
-  if(!missing(data)){
+  if(!is.null(data)){
     ind.random <- sample(1:nrow(geno.sub), nrow(geno.sub))
     data <- data.frame(geno.sub[ind.random, ], y = pheno[ind.random])
     
@@ -304,6 +302,7 @@ plotPvalues <- function(pval.info, n, logL.full){
   }
   
   if('stab' %in% colnames(pval.info)){
+    plot_combined <- plotPV + plotStab + plotPA  + plot_layout(nrow = 1)
   }else{
     plot_combined <- plotPV + plotPA  + plot_layout(nrow = 1)
   }

@@ -164,7 +164,7 @@ glmTestPredixMulti <- function(geno, geno.train, pheno, pheno.train, ind.int, fa
 
 
 
-pcsTestPredixCART <- function(geno, pheno, ind.int, geno.train, pheno.train, return.fitted = F, return.tree = F) {
+pcsTestPredixCART_old <- function(geno, pheno, ind.int, geno.train, pheno.train, return.fitted = F, return.tree = F) {
   # PCS p-value with CART model
   # Test P(Y | A,B) =  CART(A) + CART(B) model (NULL)
   # vs. P(Y | A,B) = CART(A,B) (epistasis)
@@ -331,6 +331,244 @@ pcsTestPredixCART <- function(geno, pheno, ind.int, geno.train, pheno.train, ret
   return(pv)
   
 }
+
+
+
+
+pcsTestPredixCART <- function(geno, pheno, ind.int, geno.train, pheno.train, return.fitted = F, return.tree = F) {
+  # PCS p-value with CART model
+  # Test P(Y | A,B) =  CART(A) + CART(B) model (NULL)
+  # vs. P(Y | A,B) = CART(A,B) (epistasis)
+  # Input: geno matrix with continuous gene expression data
+  #        pheno binary vector
+  #        ind.int vector with indeces of interaction features corresponding to columns in geno
+  #        fam family of glm, either 'binomial' or 'gaussian'
+  #        geno.train, pheno.train training data that is used to fit the trees
+  #        pca matrix with pca components of individulas added as covariates in the model
+  #        return.fitted logical whether fitted p vectors should be returned
+  #        return.tree logical whether fitted trees should be returned
+  # Returns: p-value (numeric value between 0 and 1) with several attributes.
+  library(stringr)
+  library(glmnet)
+  library(rpart)
+  library(lmtest)
+  library(ranger)
+  library(pracma)
+  library(gtools)
+  library(PRROC)
+  
+  ep <- 1e-10 #threshold to avoid numeric instabilities with probabilities close to zero or one
+  
+  rpart_method = "anova"
+  
+  geno.all <- geno.train
+  pheno.all <- pheno.train
+  
+  xint <- geno[,unlist(ind.int)]
+  xint <- as.matrix(xint)
+  
+  xint.train <- geno.train[,unlist(ind.int)]
+  xint.train <- as.matrix(xint.train)
+  
+  #interaction term to be tested
+  tree <- fitTree(pheno_ft = pheno.train, geno_ft = geno.train, ind.it = ind.int, rpart_method = rpart_method)
+  cp_max <- tree$control$cp
+  p.inter <- predict(tree, newdata = data.frame(y = pheno, xint))
+  p.inter <- pmax(ep, pmin(1 - ep, p.inter))
+  all_features <- (length(unique(tree$frame$var))-1 == length(ind.int))
+  
+  
+  #lower order interactions correspond to all possible splitings of features into two disjoint groups
+  comb <- expand.grid(rep(list(c(0,1)), length(ind.int) - 1))
+  comb <- cbind(rep(1, nrow(comb)), comb)
+  comb <- comb[rowSums(comb) < length(ind.int), ]
+  
+  
+  #keep track of best additive model
+  tree_comb_best <- vector('list', 2) #additive model
+  tree_comb_pred_best <- vector('list', 2)
+  
+  for(indC in 1:nrow(comb)){
+    
+    #fit additive trees with backfitting
+    res <- pheno.all - mean(pheno.all)
+    tree_comb <- vector('list', 2) #additive model
+    tree_comb_pred <- vector('list', 2)
+    
+    diff_pred <- Inf
+    max_iter <- 10
+    j <- 0
+    
+    while(j < max_iter & diff_pred > 0.01){
+      j <- j + 1
+      tree_comb_pred_old <- tree_comb_pred
+      perm_c <- sample(1:2,2)
+      for(i_p in perm_c){
+        if(!is.null(tree_comb_pred[[i_p]])){
+          res <- res + tree_comb_pred[[i_p]]
+        }
+        
+        #backfitting step
+        tree_comb[[i_p]] <- fitTree(pheno_ft = res, geno_ft = geno.all, ind.it = ind.int[comb[indC, ] == (i_p - 1)], cp_max = cp_max, rpart_type = rpart_method)
+        tree_comb_pred[[i_p]] <- predict(tree_comb[[i_p]], newdata = data.frame(gen_sub(ind.int[comb[indC, ] == (i_p - 1)], geno.all)))
+        
+        #mean centering of estimated function
+        tree_comb_pred[[i_p]] <- tree_comb_pred[[i_p]] - mean(tree_comb_pred[[i_p]])
+        res <- res - tree_comb_pred[[i_p]] 
+      }
+      
+      if(!is.null(tree_comb_pred_old[[1]])){
+        diff_pred <- max(sapply(1:2, function(x) sqrt(mean((tree_comb_pred[[x]] - tree_comb_pred_old[[x]])^2))))
+      }
+      
+    }
+    
+    # compute predictions on test set
+    for(i in 1:2){
+      tree_comb_pred[[i]] <- predict(tree_comb[[i]], newdata = data.frame(gen_sub(ind.int[comb[indC, ] == (i - 1)], geno))) 
+      
+      #mean centering of estimated function
+      tree_comb_pred[[i]] <- tree_comb_pred[[i]] - mean(tree_comb_pred[[i]])
+    }
+    
+    p.single <- mean(pheno.all) + Reduce('+', tree_comb_pred)
+    p.single <- pmax(ep, pmin(1 - ep, p.single))
+    
+    #update best model
+    if(indC == 1){
+      #initalize best model
+      tree_comb_best = tree_comb
+      tree_comb_pred_best = tree_comb_pred
+      p.single_best = p.single
+    }else{
+      #check if model improves over previous one on test data
+      if(sum(dbinom(pheno, size = 1, prob =  p.single, log = T)) > 
+         sum(dbinom(pheno, size = 1, prob =  p.single_best, log = T))){
+        
+        tree_comb_best = tree_comb
+        tree_comb_pred_best = tree_comb_pred
+        p.single_best = p.single
+        
+      }
+    }
+    
+  }
+  
+  #select best null model to compute final p-value
+  tree_comb = tree_comb_best
+  tree_comb_pred = tree_comb_pred_best
+  p.single = p.single_best
+  
+  
+  #fit individual trees directly
+  
+  #lower order trees
+  comb <- expand.grid(rep(list(c(0,1)), length(ind.int)))
+  comb <- comb[rowSums(comb) > 0 & rowSums(comb) < length(ind.int),]
+  
+  tree_comb_s <- vector('list', nrow(comb)) 
+  tree_comb_pred_s <- vector('list', nrow(comb))
+  
+  for(i in 1:nrow(comb)){
+    
+    tree_comb_s[[i]] <- fitTree(pheno_ft = pheno.all, geno_ft = geno.all, ind.it = ind.int[comb[i, ] == 1], cp_max = cp_max, rpart_type = rpart_method)
+    
+    # compute predictions on test set
+    tree_comb_pred_s[[i]] <- predict(tree_comb_s[[i]], newdata = data.frame(gen_sub(ind.int[comb[i,] == 1], geno))) 
+    
+    # when individual tree has better prediction accuracy than replace p.single 
+    if(sum(dbinom(pheno, size = 1, prob =  pmax(ep, pmin(1 - ep, tree_comb_pred_s[[i]])), log = T)) > 
+       sum(dbinom(pheno, size = 1, prob =  p.single, log = T))){
+      
+      p.single = tree_comb_pred_s[[i]]
+      p.single = pmax(ep, pmin(1 - ep, p.single))
+      tree_comb = list(tree_comb_s[[i]])
+      tree_comb_pred = tree_comb_pred_s[[i]]
+      
+    }
+  }
+  
+  y <- pheno
+  n <- length(y)
+  weights <- log(p.inter) - log(1 - p.inter) - log(p.single) + log(1 - p.single)
+  delta <- (p.single - y) * weights
+  
+  delta_mean <- mean(delta)
+  delta_sd <- sd(delta)
+  
+  stat <- sqrt(n) * delta_mean / delta_sd
+  pv <- pnorm(stat)
+  
+  if(!all_features){
+    pv <- 1
+  }
+  
+  lr_increase <- sum(dbinom(pheno, size = 1, prob =  p.inter, log = T)) > sum(dbinom(pheno, size = 1, prob =  p.single, log = T))
+  if(!lr_increase){
+    pv <- 1
+  }
+  
+  
+  # mse of NULL and alternative model
+  mse1 <- mean((pheno - p.inter)^2)
+  mse2 <- mean((pheno - p.single)^2)
+  
+  # auc of roc curve of NULL and alternative model
+  roc_curve_inter <- roc.curve(p.inter[pheno == 1], p.inter[pheno == 0], curve = T)
+  auc1 <- roc_curve_inter$auc
+  roc_curve_single <- roc.curve(p.single[pheno == 1], p.single[pheno == 0], curve = T)
+  auc2 <- roc_curve_single$auc
+  
+  # difference in mean prediction
+  mDiff1 <- mean(p.inter[pheno == 1]) - mean(p.inter[pheno == 0])
+  mDiff2 <- mean(p.single[pheno == 1]) - mean(p.single[pheno == 0])
+  
+  # log-likelihood
+  logL_single <- sum(dbinom(pheno, size = 1, prob =  p.single, log = T))
+  logL_inter <- sum(dbinom(pheno, size = 1, prob =  p.inter, log = T))
+  
+  # log-likelihood-ratio statistic
+  loglr <- logL_inter - logL_single
+  
+  attr(pv, "lr") <- exp(loglr)
+  attr(pv, "log_lr") <- loglr
+  attr(pv, "logLA") <- logL_inter
+  attr(pv, "logLH") <- logL_single
+  attr(pv, "mseA") <- mse1
+  attr(pv, "mseH") <- mse2
+  attr(pv, "aucA") <- auc1
+  attr(pv, "aucH") <- auc2
+  attr(pv, "mDiffA") <- mDiff1
+  attr(pv, "mDiffH") <- mDiff2
+  
+  attr(pv, "stat") <- stat
+  attr(pv, "delta_mean") <- delta_mean
+  attr(pv, "delta_sd") <- delta_sd
+  
+  if(return.tree){
+    attr(pv, "treeA") <- tree
+    attr(pv, "treeH") <- tree_comb
+    attr(pv, "meanPheno") <- mean(pheno.all) 
+  }
+  
+  if(return.fitted){
+    attr(pv, "pS") <- p.single
+    attr(pv, "pI") <- p.inter
+    attr(pv, "pS_comb") <- tree_comb_pred
+    attr(pv, "delta") <- delta
+  }
+  
+  return(pv)
+  
+}
+
+
+
+
+
+
+
+
 
 
 ###############################################################################
