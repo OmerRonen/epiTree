@@ -6,7 +6,7 @@ import subprocess
 import gzip
 from argparse import ArgumentParser
 from collections import defaultdict
-from itertools import izip
+# from itertools import izip
 
 if __name__ == "__main__":
   parser = ArgumentParser(
@@ -55,7 +55,7 @@ if __name__ == "__main__":
   fiter.next()
 
   # Then process the lines
-  for (dcols, fcols, bcols) in izip(diter, fiter, biter):
+  for (dcols, fcols, bcols) in zip(diter, fiter, biter):
     # Combine columns as per 'dosage' format.
     # First we add the information columns for each rsID
     nline = fcols[0:2] + [bcols[3]] + [fcols[3]] + [fcols[2]] + [fcols[4]]
