@@ -1,7 +1,7 @@
 library(RSQLite)
 
 # specify path of data base file
-name.db <- "gtex_v7_Skin_Sun_Exposed_Lower_leg_imputed_europeans_tw_0.5_signif"
+name.db <- "ctimp_Brain_Cortex"
 path.db <- paste0("data/",name.db ,".db")
 
 
