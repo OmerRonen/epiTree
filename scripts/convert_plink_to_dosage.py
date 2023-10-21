@@ -77,7 +77,7 @@ if __name__ == "__main__":
     #     with gzip.open(args.out + curCHR + ".txt.gz", "wb") as ofile:
     #         ofile.writelines(lines)
     for curCHR, lines in buff.items():
-        with gzip.open(args.out + curCHR + ".txt.gz", "wb") as ofile:
+        with gzip.open(args.out + ".txt.gz", "wb") as ofile:
             for line in lines:
                 ofile.write(line.encode('utf-8'))
 
