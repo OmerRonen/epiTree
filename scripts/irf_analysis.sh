@@ -10,8 +10,11 @@ TISSUE="Brain_Cortex"
 PY="/scratch/users/omer_ronen/mutemb/bin/python"
 PTH="/accounts/campus/omer_ronen/projects/epiTree"
 WEI="$PTH/data/ctimp_$TISSUE.db"
-RESULTS=$PTH"/results/"$PHENO"/"$TISSUE
+RESULTS=$PTH"/results/irf/"$TISSUE"_"$PHENO
 EXPR=$PTH"/results/expression/"$TISSUE"_"$PHENO
+
+# crate output directory if it doesn't exist
+mkdir -p $RESULTS
 
 
 Rscript scripts/analysis_iRF_gene.R --predx $EXPR --db $WEI --pheno data/$PHENO/pheno.csv --out $RESULTS
