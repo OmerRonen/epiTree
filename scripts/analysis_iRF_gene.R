@@ -26,10 +26,12 @@ parser$add_argument("--out", type = "character", help = "Path for output files")
 args <- parser$parse_args()
 
 # Assign arguments to variables
-path.predx <- args$predx
+# path.predx <- args$predx
 path.db <- args$db
 path.pheno <- args$pheno
 path.out <- args$out
+name.out <- 'analysis_iRF_gene.Rdata'      #name of output files
+
 
 # Construct path for lasso and ranger output files
 path.lasso <- file.path(path.out, "lasso.Rdata")
@@ -51,7 +53,6 @@ path.excl <- "/accounts/campus/omer_ronen/projects/epiTree/data/geneExclusionLis
 #
 #
 # path.out <- '../results/'     #path for output files
-# name.out <- 'analysis_iRF_gene.Rdata'      #name of output files
 # path.lasso <- paste0("results/lasso_",name.out)      #output file for lasso results only
 # path.ranger <- paste0("results/ranger_",name.out)     #output file for ranger results only
 
@@ -67,8 +68,21 @@ print("load training data")
 
 #load batch 1
 load.id <- 1:100000     #load first 100000 subjects
+geno_list = list()
+j = 1
+for (i in 5:22){
+    path.predx <- paste0("/accounts/campus/omer_ronen/projects/epiTree/results/expression/chr_",i,"_predicted_expression.txt")
+    source(paste0('scripts/load_predixcan.R'))     #load genotype files
+    # add chr_i suffix to gene names
+    colnames(geno) <- paste0(colnames(geno), "chr_", i)
+    # add geno to list
+    geno_list[[j]] <- geno
+    j = j + 1
 
-source(paste0('scripts/load_predixcan.R'))     #load genotype files
+}
+geno <- do.call(cbind, geno_list)
+# remove duplicated columns values
+
 
 #source(paste0('scripts/load_pheno.R'))      #load phenotype files
 pheno <- read.csv(path.pheno, header=FALSE)
@@ -140,6 +154,8 @@ if(file.exists(path.ranger)){
 
 KTop = c(10, 50, 100, 500, 1000, 2500)      #consider top k RF features
 oobError = numeric(length(KTop))      #out-of-bag error when considering top k RF features
+gnames <- colnames(geno)
+
 geno_mat <- data.matrix(geno)
 for(i in 1:length(KTop)){
   kTop <- KTop[i]
@@ -161,15 +177,13 @@ kTop <- KTop[which.min(oobError)]     #select best k based on oob error
 
 idkp <- order(frang$variable.importance, decreasing=TRUE)[1:kTop]
 geno_mat <- geno_mat[,idkp]
-gnames <- colnames(geno_mat)
 
-gnames <- gnames[idkp]
 
 #extract candidate interactions via iRF
 rit.param <- list(ntree=5000, depth=3, nchild=5, class.id=1, min.nd=1)      #set RIT parameters
 fit <- iRF(x=geno_mat,
            y=as.factor(pheno), 
-           varnames.grp=gnames,
+           varnames.grp=gnames[idkp],
            n.iter=3,
            iter.return=3,
            select.iter=FALSE,
@@ -179,7 +193,7 @@ fit <- iRF(x=geno_mat,
            type='ranger',
            n.core=1)
 
-rdForest <- readForest(fit$rf.list, geno)     #read forest for posthoc analysis of iRF output
+rdForest <- readForest(fit$rf.list, geno_mat)     #read forest for posthoc analysis of iRF output
 
 save(file = paste0(path.out, name.out), fit, frang, lasso, rdForest)      #save results
 

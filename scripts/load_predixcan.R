@@ -11,7 +11,7 @@ if (all(diff(load.id) != 1)) stop('Only consecutive indices supported')
 ###############################################################################
 ## Load selected patient genotype data from PrediXcan
 ###############################################################################
-
+print(path.predx)
 # Load gene identifiers
 gnames <- fread(path.predx[1], nrow=1, header=F)
 gnames <- as.character(gnames)[-c(1,2)]
