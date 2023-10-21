@@ -195,5 +195,5 @@ fit <- iRF(x=geno_mat,
 
 rdForest <- readForest(fit$rf.list, geno_mat)     #read forest for posthoc analysis of iRF output
 
-save(file = paste0(path.out, name.out), fit, frang, lasso, rdForest)      #save results
+save(file = paste0(path.out, "/", name.out), fit, frang, lasso, rdForest)      #save results
 

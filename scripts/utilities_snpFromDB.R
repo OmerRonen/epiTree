@@ -1,7 +1,7 @@
 library(RSQLite)
 
 # specify path of data base file
-name.db <- "ctimp_Brain_Cortex"
+name.db <- "ctimp_Whole_Blood"
 path.db <- paste0("data/",name.db ,".db")
 
 

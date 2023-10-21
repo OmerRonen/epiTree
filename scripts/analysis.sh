@@ -1,12 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=epitree
-#SBATCH --mail-type=ALL
+#SBATCH --mail-type=FAIL
 #SBATCH --mail-user=omer_ronen@berkeley.edu
 #SBATCH -o epitree_analysis_ms.out #File to which standard out will be written
 #SBATCH -p yugroup
 
-PHENO="Multiple_sclerosis"
-TISSUE="Brain_Cortex"
+PHENO=$1
+TISSUE=$2
 PY="/scratch/users/omer_ronen/mutemb/bin/python"
 PTH="/accounts/campus/omer_ronen/projects/epiTree"
 WEI="$PTH/data/ctimp_$TISSUE.db"
@@ -14,7 +14,7 @@ DOS=$PTH"/results/dosage/"$TISSUE"_"$PHENO
 EXPR=$PTH"/results/expression/"$TISSUE"_"$PHENO
 B_FILE="data/ukbb/"$TISSUE"_"$PHENO"_chr"
 FAM="/accounts/campus/omer_ronen/projects/epiTree/data/ukbb/"$TISSUE"_"$PHENO"_chr"
-i=$1
+i=$3
 PRE_FIX="chr_$i"
 B_FILE_i="$B_FILE$i"
 FAM_i="$FAM$i.fam"
@@ -43,4 +43,4 @@ $PY scripts/PrediXcan.py --predict --dosages "$DOS" --dosages_prefix "$PRE_FIX" 
 #  $PY scripts/PrediXcan.py --predict --dosages "$DOS_i" --dosages_prefix "$PRE_FIX" --samples "$FAM_i" --weights "$WEI" --output_prefix "$EXPR_i"
 #done
 
-#Rscript scripts/analysis_iRF_gene.R --predx $PREDX_i --db $WEI --pheno data/Multiple_sclerosis/pheno.csv --out $RESULTS_i
+#Rscript scripts/analysis_iRF_gene.R --predx $PREDX_i --db $WEI --pheno data/Multiple_sclerosis/pheno.csv --out $RE

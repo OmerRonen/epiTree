@@ -65,6 +65,12 @@ def run_job(chr, tissue, phenotype):
 
 
 if __name__ == '__main__':
-    for chr in range(1, 22):
-        run_job(chr,"Brain_Cortex" ,"Multiple sclerosis")
+    # save_files("Systemic lupus erythematosus")
+    # save_files("Rheumatoid arthritis")
+    pheno = "Rheumatoid arthritis"
+    expression = "Whole_Blood"
+    # for chr in range(1, 22):
+    run_job(22,expression ,"Rheumatoid arthritis")
+    run_job(22,expression ,"Systemic lupus erythematosus")
+
     # run_job(3, "Multiple sclerosis")
