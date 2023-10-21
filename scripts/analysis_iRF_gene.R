@@ -26,7 +26,7 @@ parser$add_argument("--out", type = "character", help = "Path for output files")
 args <- parser$parse_args()
 
 # Assign arguments to variables
-# path.predx <- args$predx
+path.predx_0 <- args$predx
 path.db <- args$db
 path.pheno <- args$pheno
 path.out <- args$out
@@ -70,8 +70,8 @@ print("load training data")
 load.id <- 1:100000     #load first 100000 subjects
 geno_list = list()
 j = 1
-for (i in 5:22){
-    path.predx <- paste0("/accounts/campus/omer_ronen/projects/epiTree/results/expression/chr_",i,"_predicted_expression.txt")
+for (i in 1:22){
+    path.predx <- paste0(path.predx_0, "/chr_",i,"_predicted_expression.txt")
     source(paste0('scripts/load_predixcan.R'))     #load genotype files
     # add chr_i suffix to gene names
     colnames(geno) <- paste0(colnames(geno), "chr_", i)

@@ -39,7 +39,7 @@ def save_files(phenotype):
     # np.savetxt(os.path.join(pth, f"ind.txt"), individuals, fmt='%s')
 
 
-def run_job(chr, phenotype):
+def run_job(chr, tissue, phenotype):
 
     # save_files(phenotype)
     # cmd_upload = f"dx upload -r data/{phenotype}"
@@ -48,13 +48,14 @@ def run_job(chr, phenotype):
     # subprocess.run(cmd_upload, shell=True)
     phenotype = phenotype.replace(" ", "_")
     pth_data = f"{phenotype}"
+    # tissue = "Brain_Cortex"
 
     geno_path = f"project-GJkXqkQJ5Xvyq6KQ708Q3qqG:/Bulk/Imputation/UKB imputation from genotype"
     sample_file = f"ukb22828_c{chr}_b0_v3.sample"
     bgen_file = f"ukb22828_c{chr}_b0_v3.bgen"
-    snplist_file = "snpList_ctimp_Brain_Cortex.snplist"
+    snplist_file = f"snpList_ctimp_{tissue}.snplist"
     individuals_file = "ind.fam"
-    out_prefix = f"{phenotype}_chr{chr}".replace(" ", "_")
+    out_prefix = f"{tissue}_{phenotype}_chr{chr}".replace(" ", "_")
     files_str = f'-iin="{os.path.join(geno_path,sample_file)}" -iin="{os.path.join(geno_path,bgen_file)}" -iin="{snplist_file}" -iin="{os.path.join(pth_data, "ind.fam")}"'
     plink_cmd = f'"plink2 --bgen {bgen_file} ref-first --sample {sample_file} --extract {snplist_file} --keep {individuals_file} --make-bed --out {out_prefix}"'
     cmd = f'/scratch/users/omer_ronen/mutemb/bin/dx run --instance-type mem1_ssd1_v2_x36 --yes swiss-army-knife {files_str} -icmd={plink_cmd}'
@@ -64,6 +65,6 @@ def run_job(chr, phenotype):
 
 
 if __name__ == '__main__':
-    for chr in range(1, 3):
-        run_job(chr, "Multiple sclerosis")
+    for chr in range(1, 22):
+        run_job(chr,"Brain_Cortex" ,"Multiple sclerosis")
     # run_job(3, "Multiple sclerosis")
