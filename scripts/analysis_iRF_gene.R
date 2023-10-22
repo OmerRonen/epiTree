@@ -73,10 +73,9 @@ j = 1
 for (i in 1:22){
     path.predx <- paste0(path.predx_0, "/chr_",i,"_predicted_expression.txt")
     source(paste0('scripts/load_predixcan.R'))     #load genotype files
-    # add chr_i suffix to gene names
-    colnames(geno) <- paste0(colnames(geno), "chr_", i)
+    # remove all zero columns from geno
     # add geno to list
-    geno_list[[j]] <- geno
+    geno_list[[j]] <- geno[, colSums(geno) != 0]
     j = j + 1
 
 }
