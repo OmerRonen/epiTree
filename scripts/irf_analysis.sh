@@ -5,8 +5,8 @@
 #SBATCH -o epitree_irf.out #File to which standard out will be written
 #SBATCH -p yugroup
 
-PHENO="Multiple_sclerosis"
-TISSUE="Brain_Cortex"
+PHENO=$1
+TISSUE=$2
 PY="/scratch/users/omer_ronen/mutemb/bin/python"
 PTH="/accounts/campus/omer_ronen/projects/epiTree"
 WEI="$PTH/data/ctimp_$TISSUE.db"
