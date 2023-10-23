@@ -8,7 +8,6 @@ library(fastmatch)
 library(glmnet)
 library(PRROC)
 library(RSQLite)
-library(superheat)
 library("grid")
 library("ggplotify")
 library(ape)
@@ -17,101 +16,131 @@ library(gridExtra)
 library(rgl)
 library(rpart)
 library(pryr)
+library(argparse)
 
+# Define the command-line arguments
+parser <- ArgumentParser(description = "EpiTree Analysis CLI")
+parser$add_argument("--predx", type = "character", help = "Path to imputed gene expression data")
+parser$add_argument("--db", type = "character", help = "Path to the database")
+parser$add_argument("--pheno", type = "character", help = "Path to phenotype file")
+parser$add_argument("--out", type = "character", help = "Path for output files")
+
+# Parse the command-line arguments
+args <- parser$parse_args()
+
+# Assign arguments to variables
+path.predx_0 <- args$predx
+path.db <- args$db
+path.pheno <- args$pheno
+path.out <- args$out
+# name.out <- 'analysis_iRF_gene.Rdata'      #name of output files
+path.pca <- "/accounts/campus/omer_ronen/projects/epiTree/disease_phenotypes_full_PC40.csv"       #path to file with principle components of subjects
+
+
+# Construct path for lasso and ranger output files
+path.lasso <- file.path(path.out, "lasso.Rdata")
+path.ranger <- file.path(path.out, "ranger.Rdata")
+path.excl <- "/accounts/campus/omer_ronen/projects/epiTree/data/geneExclusionList.txt"      #optional list of genes that should be included
 reloadData <- TRUE      #should full data set be loaded
 
-source('utilities_general.R')
-source('utilities_tests.R')
+source('/accounts/campus/omer_ronen/projects/epiTree/scripts/utilities_general.R')
+source('/accounts/campus/omer_ronen/projects/epiTree/scripts/utilities_tests.R')
 
 ###############################################################################
 ## Specify paths  
 ###############################################################################
 
-res <- 'analysis_iRF_gene'      #name of results
-path.res <- '../results/'
+# res <- 'analysis_iRF_gene'      #name of results
+# path.res <- '../results/'
 
-path.predx <- "../data/name_of_output_prediXcan_txt_file_predicted_expression.txt"      #path to imputed gene expression data
-path.db <- "../data/gtex_v7_Skin_Sun_Exposed_Lower_leg_imputed_europeans_tw_0.5_signif.db"      #path to data base
-path.excl <- "../data/geneExclusionList.txt"      #optional list of genes that should be included
+# # path.key <- "path_to_mapping_file/ukb15860_13721_mapping.tsv"     #mapping file between subject IDs in pheno (1st column) and geno (2nd column) file
+# data.field.pheno <- 'n_1747_0_0'      #data field of interest in phenotype file (here for red hair)
+# code.cases.pheno <- 2    # red hair phenotype is encoded as 2
+# code.na.pheno <- c(6, -1)     #NAs for red hair phenotype are 6, -1
 
-path.pheno <- "path_to_phenotype_file/app15860_standard_data_2016Nov19.txt"     #path to phenotype file
-path.key <- "path_to_mapping_file/ukb15860_13721_mapping.tsv"     #mapping file between subject IDs in pheno (1st column) and geno (2nd column) file
-data.field.pheno <- 'n_1747_0_0'      #data field of interest in phenotype file (here for red hair)
-code.cases.pheno <- 2    # red hair phenotype is encoded as 2
-code.na.pheno <- c(6, -1)     #NAs for red hair phenotype are 6, -1
-path.pca <- "path_to_pca_file/name_of_pca_file"       #path to file with principle components of subjects 
-
-path.out <- '../results/'     #path for output files
-name.out <- paste0(res,'.Rdata')      #name of output files
-path.lasso <- paste0("../results/lasso_",name.out)      #output file for lasso results only
-path.ranger <- paste0("../results/ranger_",name.out)     #output file for ranger results only
+# path.out <- '../results/'     #path for output files
+# name.out <- paste0(res,'.Rdata')      #name of output files
+# path.lasso <- paste0("../results/lasso_",name.out)      #output file for lasso results only
+# path.ranger <- paste0("../results/ranger_",name.out)     #output file for ranger results only
 
 ###############################################################################
 ## Load results 
 ###############################################################################
 
-load(paste0(path.res,res,".Rdata"))
+# load(paste0(path.res,res,".Rdata"))
 
 #reload full data set
 if(reloadData){
-  
-  ###############################################################################
-  ## Load training and test  data          
-  ###############################################################################
-  
-  # here we load data in batches to avoid memory issues
-  # we load a balanced sample of 15K cases and controls
-  # the first 13K of each class are training samples
-  # we assume that the first 100K subjects contain at least 15K controls
-  
-  print("load training and test data")
-  
-  #load batch 1
-  load.id <- 1:100000     #load first 100000 subjects
-  
-  source(paste0('../scripts/load_predixcan.R'))     #load genotype files
-  source(paste0('../scripts/load_pheno.R'))      #load phenotype files
-  
-  numb_cases <- sum(pheno == 1)
-  load.id <-  c(which(pheno == 0)[1:15000], which(pheno == 1)[1:min(15000, numb_cases)])
-  geno <- geno[load.id,]
-  pheno <- pheno[load.id]
-  
-  #load remaining batches
-  batch.id <- 1
-  while(numb_cases < 15000){
-    geno_old <- geno
-    pheno_old <- pheno
-    numb_cases_old <- numb_cases
-    load.id <- (100000 * batch_id + 1):(100000 * batch_id + 100000)
-    source(paste0('../scripts/load_predixcan.R'))
-    source(paste0('../scripts/load_pheno.R'))
-    
+    load.id <- 1:100000     #load first 100000 subjects
+    geno_list = list()
+    j = 1
+    for (i in 1:22){
+        path.predx <- paste0(path.predx_0, "/chr_",i,"_predicted_expression.txt")
+        source(paste0('scripts/load_predixcan.R'))     #load genotype files
+        # remove all zero columns from geno
+        # add geno to list
+        geno_list[[j]] <- geno[, colSums(geno) != 0]
+        j = j + 1
+
+    }
+    geno <- do.call(cbind, geno_list)
+    geno <- as.data.frame(as.matrix(geno))
+    geno <- geno[,!duplicated(colnames(geno), fromLast = TRUE)]
+    geno <- data.matrix(geno)
+    ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 2]
+
+    # remove duplicated columns values
+
+
+    #source(paste0('scripts/load_pheno.R'))      #load phenotype files
+    pheno <- read.csv(path.pheno, header=FALSE)
+    # set first column as row names
+    rownames(pheno) <- pheno[,1]
+    # match pheno and geno by rownames
+    pheno <- pheno[match(rownames(geno), rownames(pheno)),]
+    colnames(pheno) <- c("id", "pheno")
+    id <- pheno$id
+    pheno <- pheno$pheno
+
     numb_cases <- sum(pheno == 1)
-    load.id <-  which(pheno == 1)[1:min(15000 - numb_cases_old, numb_cases)]
-    geno <- rbind(geno_old, geno[load.id,])
-    pheno <- c(pheno_old, pheno[load.id])
-    numb_cases <- numb_cases + numb_cases_old
-    batch.id <- batch.id + 1
-  }
-  
-  ind.train <- c(which(pheno == 0)[1:13000], which(pheno == 1)[1:13000])      #specify training indeces
+
+  data_pca <- read.csv(path.pca, header=TRUE)
+  # select only subjects that are in pheno
+  data_pca <- data_pca[data_pca$participant.eid %in% id,]
+  # select columns Genetic.PC.1 to Genetic.PC.15
+  idx <- colnames(data_pca) %in% paste0("Genetic.PC", 1:15)
+
+  # make ind.train be 80% of the data
+
+  pca <- data_pca[, idx]
+  load(paste0(path.out, "/analysis_iRF_gene.Rdata"))
+  load(paste0(path.out, "/lasso.Rdata"))
+  load(paste0(path.out, "/ranger.Rdata"))
+
+
+
   geno.train <- geno[ind.train,]
   pheno.train <- pheno[ind.train]
   
-  geno <- geno[-ind.train,]
-  pheno <- pheno[-ind.train]
+  geno.test <- geno[-ind.train,]
+  pheno.test <- pheno[-ind.train]
+
+  geno <- geno.test
+  pheno <- pheno.test
   
-  gc()
+  #gc()
   
   # Load PCAs for test data
-  sel.sub <- rownames(geno)
-  source('load_pca.R')
-  pca <- xpc[, 1:15]      #select first 15 principle components
+#   sel.sub <- rownames(geno)
+#   source('load_pca.R')
+#   pca <- xpc[, 1:15]      #select first 15 principle components
   
   pca <- as.matrix(pca)
-  geno <- as.matrix(geno)
-  geno.train <- as.matrix(geno.train)
+#   geno <- as.data.frame(as.matrix(geno))
+#   geno <- geno[!duplicated(names(geno))]
+#   geno.train <- as.matrix(geno.train)
+
+
   
   
   ###############################################################################
@@ -156,16 +185,16 @@ if(reloadData){
   pr.curve.irf <- pr.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
   roc.curve.irf <- roc.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
   
-  save(file = paste0('../results/ypred_',res,'.Rdata'), ypred.lasso, ypred.ranger, ypred.irf)
+  save(file = paste0(path.out, "/prediction.Rdata"), ypred.lasso, ypred.ranger, ypred.irf)
   
   ###############################################################################
   ## Save data  
   ###############################################################################
   
-  save(file = paste0('../data/data_',res,'.Rdata'), geno, pheno, geno.train, pheno.train, pca)
+  save(file = paste0(path.out, "/pred_data.Rdata"), geno, pheno, geno.train, pheno.train, pca)
   
 }else{
-  load(file = paste0('../data/data_',res,'.Rdata'))
+  load(file = paste0(path.out, "/pred_data.Rdata"))
   
 }
 
@@ -174,7 +203,7 @@ if(reloadData){
 ###############################################################################
 
 # Load data base
-source('utilities_loadDB.R')
+source('/accounts/campus/omer_ronen/projects/epiTree/scripts/utilities_loadDB.R')
 
 indImp <- sapply(names(fit$rf.list$variable.importance), 
                  function(x) which(x == db.gene.chr.genename$gene))     #genes considered by iRF
@@ -199,8 +228,10 @@ pMulti.inter <- vector('list', length(ind.stab.inter))
 pCart.intra <- vector('list', length(ind.stab.intra))
 pCart.inter <- vector('list', length(ind.stab.inter))
 
-if(file.exists(paste0('../results/pval_all_',res,'.Rdata'))){
-  load(paste0('../results/pval_all_',res,'.Rdata'))
+pcs_pval_fname <- paste0(path.out, "/pcs_pval.Rdata")
+
+if(file.exists(pcs_pval_fname)){
+  load(pcs_pval_fname)
 }else{
   #compute p-values for stable intra chromosome interactions
   for(i in 1:length(ind.stab.intra)){
@@ -215,7 +246,7 @@ if(file.exists(paste0('../results/pval_all_',res,'.Rdata'))){
                                                 single.train = "train", pv.stat = "PCS")
   }
   
-  save(file = paste0('../results/pval_all_',res,'.Rdata'), 
+  save(file = pcs_pval_fname,
        pMulti.inter, pMulti.intra, 
        pCart.inter, pCart.intra, 
        ind.stab, ind.ichr, ind.stab.inter, ind.stab.intra, 
@@ -226,8 +257,10 @@ if(file.exists(paste0('../results/pval_all_',res,'.Rdata'))){
 ###############################################################################
 ##  compute p-values among bootstrap replicates   
 ###############################################################################
-if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
-  load(paste0('../results/pval_stab_',res,'.Rdata'))
+pcs_pval_fname <- paste0(path.out, "/pval_bs.Rdata")
+
+if(file.exists(pcs_pval_fname)){
+  load(pcs_pval_fname)
 }else{
 
   B = 10 #number of bootstrap replicates
@@ -265,7 +298,7 @@ if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
   stab.pMulti.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PMulti.intra, function(x) x[i] <= tsh.intra)))
   stab.pCart.intra <- sapply(1:length(ind.stab.intra), function(i) mean(sapply(PCart.intra, function(x) x[i] <= tsh.intra)))
 
-  save(file = paste0('../results/pval_stab_',res,'.Rdata'),
+  save(file = pcs_pval_fname,
        stab.pMulti.intra, stab.pCart.intra) 
 }
 
@@ -273,6 +306,7 @@ if(file.exists(paste0('../results/pval_stab_',res,'.Rdata'))){
 ###############################################################################
 ##  save p-value results          
 ###############################################################################
+results_pval_fname <- paste0(path.out, "/pval_results.Rdata")
 
 ind <- ind.stab.intra
 pValues.intra <- data.frame(genes = sapply(ind.db.int[ind], function(x) paste(db.gene.chr.genename$name[x], collapse = " , ")),
@@ -299,5 +333,5 @@ pValues.intra <- data.frame(genes = sapply(ind.db.int[ind], function(x) paste(db
 )
 
 
-save(file = paste0('../results/pval_',res,'.Rdata'), pValues.intra, 
+save(file = results_pval_fname, pValues.intra,
      ind.stab, ind.ichr, ind.stab.inter, ind.stab.intra, db.gene.chr.genename)  

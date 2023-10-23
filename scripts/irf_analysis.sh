@@ -16,5 +16,7 @@ EXPR=$PTH"/results/expression/"$TISSUE"_"$PHENO
 # crate output directory if it doesn't exist
 mkdir -p $RESULTS
 
+echo $RESULTS
 
 Rscript scripts/analysis_iRF_gene.R --predx $EXPR --db $WEI --pheno data/$PHENO/pheno.csv --out $RESULTS
+Rscript scripts/analysis_pcsPvalues_gene.R --predx $EXPR --db $WEI --pheno data/$PHENO/pheno.csv --out $RESULTS

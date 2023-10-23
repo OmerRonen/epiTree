@@ -31,34 +31,13 @@ path.db <- args$db
 path.pheno <- args$pheno
 path.out <- args$out
 name.out <- 'analysis_iRF_gene.Rdata'      #name of output files
-
+print(path.out)
 
 # Construct path for lasso and ranger output files
 path.lasso <- file.path(path.out, "lasso.Rdata")
 path.ranger <- file.path(path.out, "ranger.Rdata")
-#
-# ###############################################################################
-# ## Specify paths
-# ###############################################################################
-#
-# path.predx <- "/accounts/campus/omer_ronen/projects/epiTree/results/expression/chr_6_predicted_expression.txt"      #path to imputed gene expression data
-# path.db <- "/accounts/campus/omer_ronen/projects/epiTree/data/ctimp_Brain_Cortex.db"      #path to data base
 path.excl <- "/accounts/campus/omer_ronen/projects/epiTree/data/geneExclusionList.txt"      #optional list of genes that should be included
-#
-# path.pheno <- "/accounts/campus/omer_ronen/projects/epiTree/data/Multiple_sclerosis/pheno.csv"     #path to phenotype file
-# #path.key <- "/accounts/campus/omer_ronen/projects/epiTree/data/Multiple_sclerosis/mapping.csv"     #mapping file between subject IDs in pheno (1st column) and geno (2nd column) file
-# # data.field.pheno <- 'n_1747_0_0'      #data field of interest in phenotype file (here for red hair)
-# # code.cases.pheno <- 2    # red hair phenotype is encoded as 2
-# # code.na.pheno <- c(6, -1)     #NAs for red hair phenotype are 6, -1
-#
-#
-# path.out <- '../results/'     #path for output files
-# path.lasso <- paste0("results/lasso_",name.out)      #output file for lasso results only
-# path.ranger <- paste0("results/ranger_",name.out)     #output file for ranger results only
 
-###############################################################################
-## Load training  data          
-###############################################################################
 
 #here we load training data in batches to avoid memory issues
 #we load a balanced sample of 13K cases and controls
@@ -80,7 +59,11 @@ for (i in 1:22){
 
 }
 geno <- do.call(cbind, geno_list)
+geno <- as.data.frame(as.matrix(geno))
+geno <- geno[,!duplicated(colnames(geno), fromLast = TRUE)]
+geno <- data.matrix(geno)
 # remove duplicated columns values
+
 
 
 #source(paste0('scripts/load_pheno.R'))      #load phenotype files
@@ -93,6 +76,13 @@ colnames(pheno) <- c("id", "pheno")
 pheno <- pheno$pheno
 
 numb_cases <- sum(pheno == 1)
+
+# load ind train
+ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 2]
+geno <- geno[ind.train,]
+pheno <- pheno[ind.train]
+
+
 # load.id <-  c(which(pheno == 0)[1:13000], which(pheno == 1)[1:min(13000, numb_cases)])
 # geno <- geno[load.id,]
 # pheno <- pheno[load.id]
@@ -194,5 +184,5 @@ fit <- iRF(x=geno_mat,
 
 rdForest <- readForest(fit$rf.list, geno_mat)     #read forest for posthoc analysis of iRF output
 
-save(file = paste0(path.out, "/", name.out), fit, frang, lasso, rdForest)      #save results
+save(file = paste0(path.out, "/", name.out), fit, frang, lasso, rdForest, ind.train)      #save results
 
