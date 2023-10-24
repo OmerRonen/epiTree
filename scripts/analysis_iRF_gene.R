@@ -62,6 +62,7 @@ geno <- do.call(cbind, geno_list)
 geno <- as.data.frame(as.matrix(geno))
 geno <- geno[,!duplicated(colnames(geno), fromLast = TRUE)]
 geno <- data.matrix(geno)
+
 # remove duplicated columns values
 
 
@@ -78,7 +79,19 @@ pheno <- pheno$pheno
 numb_cases <- sum(pheno == 1)
 
 # load ind train
-ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 2]
+ind.train.fname <- paste0(path.out, "/ind.train.csv")
+# load if exists else create
+if(!file.exists(ind.train.fname)){
+    # take a random sample of 80% of the length of the pheno
+    ind.train <- sample(1:length(pheno), round(0.8 * length(pheno)))
+
+    write.csv(ind.train, ind.train.fname, row.names = FALSE)
+
+}
+
+ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 1]
+
+
 geno <- geno[ind.train,]
 pheno <- pheno[ind.train]
 

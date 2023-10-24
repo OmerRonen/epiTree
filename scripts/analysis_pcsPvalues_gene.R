@@ -87,7 +87,7 @@ if(reloadData){
     geno <- as.data.frame(as.matrix(geno))
     geno <- geno[,!duplicated(colnames(geno), fromLast = TRUE)]
     geno <- data.matrix(geno)
-    ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 2]
+    ind.train <- read.csv(paste0(path.out, "/ind.train.csv"), header=TRUE)[, 1]
 
     # remove duplicated columns values
 
@@ -104,13 +104,15 @@ if(reloadData){
 
     numb_cases <- sum(pheno == 1)
 
-  data_pca <- read.csv(path.pca, header=TRUE)
-  # select only subjects that are in pheno
-  data_pca <- data_pca[data_pca$participant.eid %in% id,]
-  # select columns Genetic.PC.1 to Genetic.PC.15
-  idx <- colnames(data_pca) %in% paste0("Genetic.PC", 1:15)
+      data_pca <- read.csv(path.pca, header=TRUE)
+      # select only subjects that are in pheno
+      data_pca <- data_pca[data_pca$participant.eid %in% id,]
+      # select columns Genetic.PC.1 to Genetic.PC.15
+      idx <- colnames(data_pca) %in% paste0("Genetic.PC", 1:15)
 
   # make ind.train be 80% of the data
+
+
 
   pca <- data_pca[, idx]
   load(paste0(path.out, "/analysis_iRF_gene.Rdata"))
@@ -136,6 +138,11 @@ if(reloadData){
 #   pca <- xpc[, 1:15]      #select first 15 principle components
   
   pca <- as.matrix(pca)
+    pca.train <- pca[ind.train,]
+    pca.test <- pca[-ind.train,]
+
+  # Load lasso and ranger results
+
 #   geno <- as.data.frame(as.matrix(geno))
 #   geno <- geno[!duplicated(names(geno))]
 #   geno.train <- as.matrix(geno.train)
@@ -147,22 +154,22 @@ if(reloadData){
   ## Test lasso  
   ###############################################################################
 
-  ypred <- predict(lasso, geno, type = "response")
+  ypred <- predict(lasso, geno.test, type = "response")
   ypred.lasso <- ypred
   
-  pr.curve.lasso <- pr.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
-  roc.curve.lasso <- roc.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
+  pr.curve.lasso <- pr.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
+  roc.curve.lasso <- roc.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
   
   ###############################################################################
   ## Test ranger  
   ###############################################################################
   
-  ypred <- predict(frang, data=geno, predict.all=TRUE)
+  ypred <- predict(frang, data=geno.test, predict.all=TRUE)
   ypred <- rowMeans(ypred$predictions)
   ypred.ranger <- ypred
   
-  pr.curve.ranger <- pr.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
-  roc.curve.ranger <- roc.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
+  pr.curve.ranger <- pr.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
+  roc.curve.ranger <- roc.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
   
   ###############################################################################
   ## Test iRF 
@@ -178,12 +185,12 @@ if(reloadData){
     geno.train <- geno.train[ ,ind]
   }
   
-  ypred <- predict(fit$rf.list, data=geno, predict.all=TRUE)
+  ypred <- predict(fit$rf.list, data=geno.test, predict.all=TRUE)
   ypred <- rowMeans(ypred$predictions)
   ypred.irf <- ypred
   
-  pr.curve.irf <- pr.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
-  roc.curve.irf <- roc.curve(ypred[pheno == 1], ypred[pheno == 0], curve = TRUE)
+  pr.curve.irf <- pr.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
+  roc.curve.irf <- roc.curve(ypred[pheno.test == 1], ypred[pheno.test == 0], curve = TRUE)
   
   save(file = paste0(path.out, "/prediction.Rdata"), ypred.lasso, ypred.ranger, ypred.irf)
   
@@ -240,7 +247,7 @@ if(file.exists(pcs_pval_fname)){
     int <- unlist(fit$interaction$int[ind.stab.intra[i]])
     pMulti.intra[[i]] <- glmTestPredixMulti(geno = geno, pheno = pheno, 
                                             geno.train = geno.train, pheno.train = pheno.train, 
-                                            ind.int = ind.int, fam = 'binomial', pca = pca)
+                                            ind.int = ind.int, fam = 'binomial', pca = pca.train)
     pCart.intra[[i]] <- pcsTestPredixCART(geno = geno, pheno = pheno, ind.int = ind.int, 
                                                 geno.train = geno.train, pheno.train = pheno.train, 
                                                 single.train = "train", pv.stat = "PCS")

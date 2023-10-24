@@ -8,7 +8,7 @@ sqlite.driver <- dbDriver("SQLite")
 if (!exists('path.db')) stop('Specifify PrediXcan database path as: "path.db"')
 if (!exists('path.bim.out')) print('Specifify output bim file with list of DB SNPs as: "path.bim.out"')
 
-source('utilities_general.R')
+source('/accounts/campus/omer_ronen/projects/epiTree/scripts/utilities_general.R')
 
 #loading database
 db <- dbConnect(sqlite.driver, dbname = path.db)
